@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  chromium:
+    image: zenika/alpine-chrome:latest
+    container_name: openclaw_chromium
+    restart: unless-stopped
+    command:
+      - "--remote-debugging-address=0.0.0.0"
+      - "--remote-debugging-port=9222"
+      - "--no-sandbox"
+      - "--disable-gpu"
+      - "--headless"
+      - "--disable-background-networking"
+      - "--disable-default-apps"
+      - "--disable-extensions"
+      - "--disable-sync"
+      - "--disable-translate"
+      - "--metrics-recording-only"
+      - "--mute-audio"
+      - "--no-first-run"
+      - "--safebrowsing-disable-auto-update"
+    ports:
+      - "127.0.0.1:9222"
+    networks:
+      - browser_net

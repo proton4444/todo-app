@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mission Control - Clawd Dashboard</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e4e4e7;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+        .header {
+            background: rgba(255, 69, 0, 0.1);
+            border-bottom: 2px solid #ff4500;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .header .status {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        .status-badge {
+            background: #36393f;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #43b581;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .main {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+        @media (max-width: 1200px) {
+            .main {
+                grid-template-columns: 1fr;
+            }
+        }
+        .section {
+            background: rgba(54, 57, 63, 0.8);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 69, 0, 0.2);
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #ff4500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .kanban-board {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+        }
+        .column {
+            background: rgba(114, 137, 218, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            min-height: 300px;
+        }
+        .column h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+            color: #7289da;
+            display: flex;
+            justify-content: space-between;
+        }
+        .column h3 .count {
+            background: #ff4500;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+        }
+        .task {
+            background: #4a4a55;
+            color: #fff;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+        .task:hover {
+            background: #5a5a65;
+            transform: translateX(3px);
+        }
+        .task.dragging {
+            opacity: 0.5;
+        }
+        .task .delete {
+            color: #ff4500;
+            cursor: pointer;
+            font-size: 1.2rem;
+            margin-left: 10px;
+        }
+        .add-task {
+            margin-top: 10px;
+        }
+        .add-task input {
+            width: 100%;
+            padding: 8px;
+            border: none;
+            border-radius: 4px;
+            background: #36393f;
+            color: #fff;
+        }
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        .project-card {
+            background: rgba(67, 181, 129, 0.1);
+            border: 1px solid rgba(67, 181, 129, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .project-card h4 {
+            margin: 0 0 5px 0;
+            color: #43b581;
+        }
+        .project-card p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+        .project-card .status {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+        .status-done { background: rgba(67, 181, 129, 0.2); color: #43b581; }
+        .status-wip { background: rgba(255, 184, 108, 0.2); color: #ffb86c; }
+        .status-pending { background: rgba(255, 69, 0, 0.2); color: #ff4500; }
+        .quick-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .action-btn {
+            background: rgba(114, 137, 218, 0.2);
+            border: 1px solid #7289da;
+            color: #7289da;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        .action-btn:hover {
+            background: #7289da;
+            color: #fff;
+            transform: translateY(-2px);
+        }
+        .system-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        .stat-card {
+            background: rgba(114, 137, 218, 0.1);
+            padding: 12px;
+            border-radius: 6px;
+        }
+        .stat-card .label {
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-bottom: 5px;
+        }
+        .stat-card .value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ff4500;
+        }
+        .activity-log {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 69, 0, 0.1);
+            font-size: 0.9rem;
+        }
+        .log-entry .time {
+            color: #7289da;
+            font-size: 0.8rem;
+        }
+        .batch-add {
+            background: rgba(255, 184, 108, 0.1);
+            border: 1px solid #ffb86c;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        .batch-add textarea {
+            width: 100%;
+            min-height: 60px;
+            padding: 8px;
+            border: none;
+            border-radius: 4px;
+            background: #36393f;
+            color: #fff;
+            resize: vertical;
+        }
+        .batch-add button {
+            background: #ffb86c;
+            color: #fff;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .batch-add button:hover {
+            background: #e0a060;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a1a2e;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #36393f;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #7289da;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🦾 Mission Control</h1>
+        <div class="status">
+            <div class="status-badge">
+                <div class="status-dot"></div>
+                OpenClaw: Online
+            </div>
+            <div class="status-badge" id="memory-status">
+                🧠 Memory: Active
+            </div>
+            <div class="status-badge">
+                🤖 Model: GLM 4.7
+            </div>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="left-column">
+            <!-- Kanban Section -->
+            <div class="section">
+                <h2>📋 Kanban Board</h2>
+                <div class="kanban-board">
+                    <div class="column" id="backlog">
+                        <h3>Backlog <span class="count" id="backlog-count">0</span></h3>
+                        <div class="tasks" id="backlog-tasks"></div>
+                        <div class="add-task">
+                            <input type="text" placeholder="+ Add task..." id="add-backlog">
+                        </div>
+                    </div>
+                    <div class="column" id="inprogress">
+                        <h3>In Progress <span class="count" id="inprogress-count">0</span></h3>
+                        <div class="tasks" id="inprogress-tasks"></div>
+                        <div class="add-task">
+                            <input type="text" placeholder="+ Add task..." id="add-inprogress">
+                        </div>
+                    </div>
+                    <div class="column" id="done">
+                        <h3>Done <span class="count" id="done-count">0</span></h3>
+                        <div class="tasks" id="done-tasks"></div>
+                        <div class="add-task">
+                            <input type="text" placeholder="+ Add task..." id="add-done">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="batch-add">
+                    <textarea id="batch-tasks" placeholder="Batch add tasks (one per line)..."></textarea>
+                    <button onclick="batchAdd()">🚀 Batch Add to Backlog</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-column">
+            <!-- Projects Section -->
+            <div class="section">
+                <h2>🚀 Active Projects</h2>
+                <div class="projects-grid">
+                    <div class="project-card">
+                        <h4>To-Do App</h4>
+                        <p>Next.js + NextAuth</p>
+                        <span class="status status-wip">Pending Env Vars</span>
+                    </div>
+                    <div class="project-card">
+                        <h4>BMad Method</h4>
+                        <p>Parallel agents</p>
+                        <span class="status status-done">✅ Live</span>
+                    </div>
+                    <div class="project-card">
+                        <h4>Task API</h4>
+                        <p>REST service</p>
+                        <span class="status status-wip">WIP</span>
+                    </div>
+                    <div class="project-card">
+                        <h4>Kanban Board</h4>
+                        <p>Task tracking</p>
+                        <span class="status status-done">✅ Live</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="section">
+                <h2>⚡ Quick Actions</h2>
+                <div class="quick-actions">
+                    <button class="action-btn" onclick="showSummary()">📊 Show Summary</button>
+                    <button class="action-btn" onclick="showMemory()">🧠 Search Memory</button>
+                    <button class="action-btn" onclick="showBMad()">🤖 Run BMad</button>
+                    <button class="action-btn" onclick="showDeploy()">🚀 Deploy App</button>
+                    <button class="action-btn" onclick="clearDone()">🧹 Clear Done</button>
+                </div>
+            </div>
+
+            <!-- System Stats -->
+            <div class="section">
+                <h2>📈 System Stats</h2>
+                <div class="system-stats">
+                    <div class="stat-card">
+                        <div class="label">Tasks Done</div>
+                        <div class="value" id="done-count-display">42</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Active Tasks</div>
+                        <div class="value" id="active-count-display">2</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Sprint Cycle</div>
+                        <div class="value">7 Days</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Daily Standup</div>
+                        <div class="value">9 AM UTC</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Log -->
+            <div class="section">
+                <h2>📜 Recent Activity</h2>
+                <div class="activity-log" id="activity-log">
+                    <div class="log-entry">
+                        <div class="time">Feb 2, 16:50</div>
+                        Memory search enabled (local provider)
+                    </div>
+                    <div class="log-entry">
+                        <div class="time">Feb 2, 16:28</div>
+                        OpenClaw config patched & restarted
+                    </div>
+                    <div class="log-entry">
+                        <div class="time">Feb 2, 14:21</div>
+                        BMad menu script created
+                    </div>
+                    <div class="log-entry">
+                        <div class="time">Feb 1, 17:58</div>
+                        To-Do app generated & pushed to GitHub
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load tasks from localStorage or use defaults
+        let tasks = {
+            backlog: JSON.parse(localStorage.getItem('kanban-backlog') || '[]'),
+            inprogress: JSON.parse(localStorage.getItem('kanban-inprogress') || '[]'),
+            done: JSON.parse(localStorage.getItem('kanban-done') || '[]')
+        };
+
+        // Default tasks for first load
+        if (tasks.backlog.length === 0 && tasks.inprogress.length === 0 && tasks.done.length === 0) {
+            tasks.backlog = [
+                'Optimize AWS bot architecture',
+                'Add quantum computing deeper dive task',
+                'Implement DFS graph algorithm in TypeScript',
+                'Implement /bmad-menu inline buttons'
+            ];
+            tasks.inprogress = [
+                'Test MIMO vs Grok model performance',
+                'Review + refine kanban board usage'
+            ];
+            tasks.done = [
+                'Deploy to-do app with browser automation',
+                'Build BMad Method integration',
+                'Create web use MCP setup',
+                'Generate text Kanban for task tracking'
+            ];
+        }
+
+        // Render all tasks
+        function renderAll() {
+            for (const col of ['backlog', 'inprogress', 'done']) {
+                const container = document.getElementById(`${col}-tasks`);
+                const countEl = document.getElementById(`${col}-count`);
+                container.innerHTML = '';
+                
+                tasks[col].forEach((task, idx) => {
+                    const taskEl = document.createElement('div');
+                    taskEl.className = 'task';
+                    taskEl.draggable = true;
+                    taskEl.dataset.column = col;
+                    taskEl.dataset.index = idx;
+                    taskEl.innerHTML = `${task}<span class="delete" onclick="deleteTask('${col}', ${idx})">✕</span>`;
+                    container.appendChild(taskEl);
+                });
+                
+                countEl.textContent = tasks[col].length;
+                localStorage.setItem(`kanban-${col}`, JSON.stringify(tasks[col]));
+            }
+            
+            // Update stats
+            document.getElementById('done-count-display').textContent = tasks.done.length;
+            document.getElementById('active-count-display').textContent = tasks.inprogress.length + tasks.backlog.length;
+        }
+
+        // Add single task
+        function addTask(column) {
+            const input = document.getElementById(`add-${column}`);
+            if (input.value.trim()) {
+                tasks[column].push(input.value.trim());
+                input.value = '';
+                renderAll();
+            }
+        }
+
+        // Delete task
+        function deleteTask(column, idx) {
+            tasks[column].splice(idx, 1);
+            renderAll();
+        }
+
+        // Batch add tasks
+        function batchAdd() {
+            const batch = document.getElementById('batch-tasks').value
+                .split('\n')
+                .map(t => t.trim())
+                .filter(t => t);
+            
+            if (batch.length > 0) {
+                tasks.backlog.push(...batch);
+                document.getElementById('batch-tasks').value = '';
+                renderAll();
+            }
+        }
+
+        // Drag and drop handlers
+        document.addEventListener('dragstart', e => {
+            if (e.target.classList.contains('task')) {
+                e.target.classList.add('dragging');
+                e.dataTransfer.setData('text/plain', JSON.stringify({
+                    column: e.target.dataset.column,
+                    index: parseInt(e.target.dataset.index)
+                }));
+            }
+        });
+
+        document.addEventListener('dragend', e => {
+            e.target.classList.remove('dragging');
+            document.querySelectorAll('.task').forEach(t => t.style.opacity = '1');
+        });
+
+        document.addEventListener('dragover', e => {
+            e.preventDefault();
+            const column = e.target.closest('.column');
+            if (column) {
+                const tasksEl = column.querySelector('.tasks');
+                tasksEl.style.background = 'rgba(67, 181, 129, 0.1)';
+            }
+        });
+
+        document.addEventListener('dragleave', e => {
+            const tasksEl = e.target.closest('.tasks');
+            if (tasksEl) {
+                tasksEl.style.background = '';
+            }
+        });
+
+        document.addEventListener('drop', e => {
+            e.preventDefault();
+            const column = e.target.closest('.column');
+            if (column) {
+                const tasksEl = column.querySelector('.tasks');
+                tasksEl.style.background = '';
+                
+                const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                const [task] = tasks[data.column].splice(data.index, 1);
+                
+                const targetColumn = column.id;
+                tasks[targetColumn].push(task);
+                renderAll();
+            }
+        });
+
+        // Enter key to add tasks
+        document.querySelectorAll('.add-task input').forEach(input => {
+            input.addEventListener('keypress', e => {
+                if (e.key === 'Enter') {
+                    const column = input.id.replace('add-', '');
+                    addTask(column);
+                }
+            });
+        });
+
+        // Quick actions
+        function showSummary() {
+            alert(`📊 Mission Summary\n\nDone: ${tasks.done.length}\nIn Progress: ${tasks.inprogress.length}\nBacklog: ${tasks.backlog.length}\n\nTotal: ${tasks.done.length + tasks.inprogress.length + tasks.backlog.length}`);
+        }
+
+        function showMemory() {
+            alert('🧠 Memory search is active! Ask me about past work, decisions, or preferences and I\'ll search your memory files.');
+        }
+
+        function showBMad() {
+            alert('🤖 BMad Method is ready! Use these commands:\n\n/bmad-parallel-planning - New features\n/bmad-implement - Build features\n/bmad-sprint-planning - Organize work\n/bmad-daily-standup - Daily updates');
+        }
+
+        function showDeploy() {
+            alert('🚀 Deployment Script Ready!\n\nRun: ./deploy-to-vercel.sh [app-name] [project-url]\n\nExample: ./deploy-to-vercel.sh todo-app https://todo-app-abc123.vercel.app');
+        }
+
+        function clearDone() {
+            if (confirm('Clear all done tasks?')) {
+                tasks.done = [];
+                renderAll();
+            }
+        }
+
+        // Initial render
+        renderAll();
+    </script>
+</body>
+</html>

@@ -1,0 +1,233 @@
+&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+    &lt;title&gt;Mission Control - Kanban Board&lt;/title&gt;
+    &lt;style&gt;
+        body {
+            background-color: #2b2d30;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .kanban-board {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: space-around;
+        }
+        .column {
+            background-color: #36393f;
+            border-radius: 8px;
+            padding: 20px;
+            width: 250px;
+            min-height: 400px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        }
+        .column h2 {
+            margin-top: 0;
+        }
+        .task {
+            background-color: #7289da;
+            color: #ffffff;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            cursor: move;
+            position: relative;
+        }
+        .task.drag-over {
+            background-color: #5f6bae;
+        }
+        .task .delete-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            color: #ff0000;
+            cursor: pointer;
+        }
+        .add-task, .add-batch {
+            margin-top: 20px;
+        }
+        .add-task input, .add-batch textarea {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 4px;
+        }
+        .add-task button, .add-batch button {
+            background-color: #43b581;
+            color: #ffffff;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .add-task button:hover, .add-batch button:hover {
+            background-color: #3aa569;
+        }
+    &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+    &lt;h1&gt;🎮 Mission Control - Kanban Board&lt;/h1&gt;
+    &lt;div class="kanban-board"&gt;
+        &lt;div class="column" id="backlog" data-column="backlog"&gt;
+            &lt;h2&gt;Backlog&lt;/h2&gt;
+            &lt;div id="backlog-tasks" class="tasks"&gt;
+                &lt;div class="task" draggable="true"&gt;Add quantum computing deeper dive task&lt;span class="delete-btn"&gt;✕&lt;/span&gt;&lt;/div&gt;
+                &lt;div class="task" draggable="true"&gt;Implement DFS graph algorithm in TypeScript&lt;span class="delete-btn"&gt;✕&lt;/span&gt;&lt;/div&gt;
+                &lt;div class="task" draggable="true"&gt;Upgrade AWS bot to Brain vs Muscles (Opus planning, specialized execution)&lt;span class="delete-btn"&gt;✕&lt;/span&gt;&lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div class="add-task"&gt;
+                &lt;input type="text" placeholder="Add task to Backlog" id="new-task-backlog"&gt;
+                &lt;button onclick="addTask('backlog')"&gt;Add&lt;/button&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="column" id="in-progress" data-column="in-progress"&gt;
+            &lt;h2&gt;In Progress&lt;/h2&gt;
+            &lt;div id="in-progress-tasks" class="tasks"&gt;
+                &lt;div class="task" draggable="true"&gt;Review + refine kanban board usage (integrate sub-agent codes)&lt;span class="delete-btn"&gt;✕&lt;/span&gt;&lt;/div&gt;
+                &lt;div class="task" draggable="true"&gt;Daily model benchmark: MIMO vs Grok (cron set; runs checked)&lt;span class="delete-btn"&gt;✕&lt;/span&gt;&lt;/div&gt;
+                &lt;div class="task" draggable="true"&gt;Monitor overnight work: Cron alerts, proactive tasks (overnight-check active)&lt;span class="delete-btn"&gt;✕&lt;/span&gt;&lt;/div&gt;
+                &lt;div class="task" draggable="true"&gt;Check config health: Cron health check (Gemini isolated)&lt;span class="delete-btn"&gt;✕&lt;/span&gt;&lt;/div&gt;
+                &lt;div class="task" draggable="true"&gt;Self-coding: Integrate sub-agent outputs (collected)&lt;span class="delete-btn"&gt;✕&lt;/span&gt;&lt;/div&gt;
+            &lt;/div&gt;
+            &lt;div class="add-task"&gt;
+                &lt;input type="text" placeholder="Add task to In Progress" id="new-task-in-progress"&gt;
+                &lt;button onclick="addTask('in-progress')"&gt;Add&lt;/button&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class="column" id="review" data-column="review"&gt;
+            &lt;h2&gt;Review&lt;/h2&gt;
+            &lt;div id="review-tasks" class="tasks"&gt;
+                &lt;!-- Done tasks from history: 32 items like bootstrap, models, etc., but too many to list all; summary: All Phase 1-5 setups --&gt;
+            &lt;/div&gt;
+            &lt;div class="add-task"&gt;
+                &lt;input type="text" placeholder="Add task to Review" id="new-task-review"&gt;
+                &lt;button onclick="addTask('review')"&gt;Add&lt;/button&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class="add-batch"&gt;
+        &lt;textarea placeholder="Batch add tasks (e.g., task1, task2, task3) to Backlog" id="batch-tasks"&gt;&lt;/textarea&gt;
+        &lt;button onclick="batchAddTasks()"&gt;Batch Add to Backlog&lt;/button&gt;
+    &lt;/div&gt;
+    &lt;script&gt;
+        const tasks = {
+            backlog: [
+                'Add quantum computing deeper dive task',
+                'Implement DFS graph algorithm in TypeScript',
+                'Upgrade AWS bot to Brain vs Muscles (Opus planning, specialized execution)'
+            ],
+            'in-progress': [
+                'Review + refine kanban board usage (integrate sub-agent codes)',
+                'Daily model benchmark: MIMO vs Grok (cron set; runs checked)',
+                'Monitor overnight work: Cron alerts, proactive tasks (overnight-check active)',
+                'Check config health: Cron health check (Gemini isolated)',
+                'Self-coding: Integrate sub-agent outputs (collected)'
+            ],
+            review: [] // Empty for review
+        };
+
+        // Init tasks from localStorage or default
+        function initTasks() {
+            for (const col in tasks) {
+                const stored = localStorage.getItem(`kanban-${col}`);
+                if (stored) tasks[col] = JSON.parse(stored);
+                renderTasks(col);
+            }
+        }
+
+        // Render tasks for column
+        function renderTasks(column) {
+            const container = document.getElementById(`${column}-tasks`);
+            container.innerHTML = '';
+            tasks[column].forEach(task =&gt; {
+                const taskEl = document.createElement('div');
+                taskEl.className = 'task';
+                taskEl.draggable = true;
+                taskEl.innerHTML = `${task}&lt;span class="delete-btn"&gt;✕&lt;/span&gt;`;
+                container.appendChild(taskEl);
+            });
+            localStorage.setItem(`kanban-${column}`, JSON.stringify(tasks[column]));
+        }
+
+        // Add single task
+        function addTask(column) {
+            const input = document.getElementById(`new-task-${column}`);
+            if (input.value.trim()) {
+                tasks[column].push(input.value.trim());
+                renderTasks(column);
+                input.value = '';
+            }
+        }
+
+        // Batch add tasks
+        function batchAddTasks() {
+            const batch = document.getElementById('batch-tasks').value.split(',').map(t =&gt; t.trim()).filter(t =&gt; t);
+            tasks.backlog.push(...batch);
+            renderTasks('backlog');
+            document.getElementById('batch-tasks').value = '';
+        }
+
+        // Drag and drop
+        document.addEventListener('dragstart', e =&gt; {
+            if (e.target.classList.contains('task')) {
+                e.dataTransfer.setData('text/plain', e.target.innerText.slice(0, -1)); // Remove ✕
+                e.target.classList.add('dragging');
+            }
+        });
+
+        document.addEventListener('dragover', e =&gt; {
+            e.preventDefault();
+            e.target.closest('.tasks').classList.add('drag-over');
+        });
+
+        document.addEventListener('drop', e =&gt; {
+            e.preventDefault();
+            const taskText = e.dataTransfer.getData('text/plain');
+            const newContainer = e.target.closest('.column');
+            if (newContainer) {
+                const newColumn = newContainer.id.split('-')[0];
+                // Remove from old
+                for (const col in tasks) {
+                    const idx = tasks[col].findIndex(t =&gt; t === taskText);
+                    if (idx&gt; -1) {
+                        tasks[col].splice(idx, 1);
+                        renderTasks(col);
+                        break;
+                    }
+                }
+                // Add to new
+                tasks[newColumn].push(taskText);
+                renderTasks(newColumn);
+            }
+            e.target.closest('.tasks').classList.remove('drag-over');
+            document.querySelector('.dragging').classList.remove('dragging');
+        });
+
+        // Delete task
+        document.addEventListener('click', e =&gt; {
+            if (e.target.classList.contains('delete-btn')) {
+                const taskEl = e.target.parentElement;
+                const column = taskEl.closest('.column').id.split('-')[0];
+                const taskText = taskEl.innerText.slice(0, -1);
+                const idx = tasks[column].findIndex(t =&gt; t === taskText);
+                if (idx&gt; -1) {
+                    tasks[column].splice(idx, 1);
+                    renderTasks(column);
+                }
+            }
+        });
+
+        initTasks();
+    &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;

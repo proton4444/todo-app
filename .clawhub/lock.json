@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "weather": {
+      "version": "1.0.0",
+      "installedAt": 1770044962101
+    },
+    "self-improving-agent": {
+      "version": "1.0.4",
+      "installedAt": 1770046987825
+    },
+    "mission-control": {
+      "version": "2.0.0",
+      "installedAt": 1770051666832
+    }
+  }
+}
