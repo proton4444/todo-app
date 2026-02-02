@@ -104,7 +104,7 @@ function KanbanColumn({
         onMoveTask(item.id, item.column, column);
       }
     },
-    collect: (monitor: any) => ({
+    collect: (monitor) => ({
       isOver: monitor.isOver()
     })
   });
@@ -154,7 +154,7 @@ function KanbanColumn({
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleAdd()}
             placeholder={`Add to ${COLUMN_TITLES[column]}...`}
-            className="w-full px-3 py-2 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-white text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500 transition-colors"
+            className="w-full px-3 py-2 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-white text-sm focus:outline-none focus:border-blue-500 transition-colors"
             autoFocus
           />
         </div>
@@ -283,7 +283,7 @@ export default function MissionControl() {
                 {/* Quick Actions Toggle */}
                 <button
                   onClick={() => setShowQuickActions(!showQuickActions)}
-                  className="bg-white/10 hover:bg-white/20 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                  className="bg-white/10 hover:bg-white/20 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
                 >
                   <MoreVertical className="w-5 h-5" />
                 </button>
@@ -299,7 +299,7 @@ export default function MissionControl() {
               {/* Completion Rate */}
               <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-xl p-4 border border-green-500/20 dark:border-green-500/30">
                 <div className="flex items-center gap-2 mb-1">
-                  <BarChart3 className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  <BarChart3 className="w-5 h-5 text-green-600 dark:text-green-400" />
                   <span className="text-xs text-green-600 dark:text-green-400 font-medium">Progress</span>
                 </div>
                 <div className="text-2xl font-bold text-gray-900 dark:text-white">{completionRate}%</div>
@@ -309,7 +309,7 @@ export default function MissionControl() {
               {/* In Progress */}
               <div className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-xl p-4 border border-blue-500/20 dark:border-blue-500/30">
                 <div className="flex items-center gap-2 mb-1">
-                  <Play className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <Play className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                   <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">In Progress</span>
                 </div>
                 <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.inProgress}</div>
@@ -319,7 +319,7 @@ export default function MissionControl() {
               {/* Backlog */}
               <div className="bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-xl p-4 border border-orange-500/20 dark:border-orange-500/30">
                 <div className="flex items-center gap-2 mb-1">
-                  <FolderOpen className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                  <FolderOpen className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                   <span className="text-xs text-orange-600 dark:text-orange-400 font-medium">Backlog</span>
                 </div>
                 <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.backlog}</div>
@@ -329,7 +329,7 @@ export default function MissionControl() {
               {/* Quick Add to Backlog */}
               <div className="md:col-span-2 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl p-4 border border-purple-500/20 dark:border-purple-500/30">
                 <div className="flex items-center gap-2 mb-1">
-                  <Zap className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  <Zap className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                   <span className="text-xs text-purple-600 dark:text-purple-400 font-medium">Quick Add</span>
                 </div>
                 <input
