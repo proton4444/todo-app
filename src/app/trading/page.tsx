@@ -24,6 +24,7 @@ import {
 
 import type { MCPStatus, OrderForm } from '@/lib/trading/types';
 import { TradingProvider, useTradingStore } from '@/lib/trading/store';
+import { normalizeTrades } from '@/lib/trading/normalize';
 
 function TradingDashboardInner() {
   const { state, actions } = useTradingStore();
@@ -151,7 +152,8 @@ function TradingDashboardInner() {
       const response = await fetch('/api/mcp?action=orders');
       const data = await response.json();
       if (data.orders) {
-        actions.setTrades(data.orders);
+        const normalized = normalizeTrades(data.orders, { limit: 200 });
+        actions.setTrades(normalized.trades);
       }
     } catch (error) {
       console.error('Failed to load trades:', error);
@@ -199,7 +201,10 @@ function TradingDashboardInner() {
       const data = await response.json();
 
       if (data.success) {
-        actions.prependTrade(data.order);
+        // Normalize + dedupe by id
+        const normalized = normalizeTrades([data.order], { limit: 1 });
+        const maybe = normalized.trades[0];
+        if (maybe) actions.prependTrade(maybe);
 
         // Update or create position
         actions.setPositions(
