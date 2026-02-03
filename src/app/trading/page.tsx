@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowUpRight, ArrowDownLeft, RefreshCw, Plus, Minus, TrendingUp, TrendingDown, Wallet, Activity, History, BarChart3, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, RefreshCw, Plus, Minus, TrendingUp, TrendingDown, Wallet, Activity, History, BarChart3, CheckCircle, AlertCircle, Database, Wifi, WifiOff, Settings, Plug, Unplug, X } from 'lucide-react';
 
 type MarketData = {
   symbol: string;
   price: number;
   change24h: number;
   volume24h: number;
+  timestamp: number;
 };
 
 type Position = {
@@ -23,6 +24,7 @@ type Position = {
 
 type Trade = {
   id: string;
+  exchange: string;
   symbol: string;
   side: 'buy' | 'sell';
   amount: number;
@@ -32,36 +34,34 @@ type Trade = {
 };
 
 type OrderForm = {
+  exchange: string;
   symbol: string;
   side: 'buy' | 'sell';
   amount: number;
   leverage: number;
 };
 
+type MCPStatus = {
+  connected: boolean;
+  exchanges: number;
+  tools: number;
+  uptime: number;
+};
+
 export default function TradingDashboard() {
-  const [marketData, setMarketData] = useState<MarketData[]>([
-    { symbol: 'BTC/USDT', price: 43500.00, change24h: 2.5, volume24h: 1.2e9 },
-    { symbol: 'ETH/USDT', price: 2450.00, change24h: -1.2, volume24h: 8.5e8 },
-    { symbol: 'SOL/USDT', price: 98.50, change24h: 4.3, volume24h: 3.2e8 },
-  ]);
-
-  const [positions, setPositions] = useState<Position[]>([
-    { id: '1', symbol: 'BTC/USDT', side: 'long', size: 0.5, entryPrice: 42000, currentPrice: 43500, pnl: 750, pnlPercent: 3.57 },
-    { id: '2', symbol: 'ETH/USDT', side: 'short', size: 5, entryPrice: 2500, currentPrice: 2450, pnl: 250, pnlPercent: 4.0 },
-  ]);
-
-  const [trades, setTrades] = useState<Trade[]>([
-    { id: '1', symbol: 'BTC/USDT', side: 'buy', amount: 0.5, price: 42000, timestamp: Date.now() - 3600000, status: 'filled' },
-    { id: '2', symbol: 'ETH/USDT', side: 'sell', amount: 5, price: 2500, timestamp: Date.now() - 7200000, status: 'filled' },
-  ]);
-
+  const [mcpConnected, setMcpConnected] = useState(true);
+  const [mcpStatus, setMcpStatus] = useState<MCPStatus | null>(null);
+  const [availableExchanges, setAvailableExchanges] = useState<any[]>([]);
+  const [marketData, setMarketData] = useState<MarketData[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [trades, setTrades] = useState<Trade[]>([]);
   const [orderForm, setOrderForm] = useState<OrderForm>({
+    exchange: 'Binance',
     symbol: 'BTC/USDT',
     side: 'buy',
     amount: 0.1,
     leverage: 1,
   });
-
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string, visible: boolean }>({ type: 'success', message: '', visible: false });
 
   const showNotification = (type: 'success' | 'error', message: string) => {
@@ -69,82 +69,149 @@ export default function TradingDashboard() {
     setTimeout(() => setNotification(prev => ({ ...prev, visible: false })), 3000);
   };
 
-  // Simulate real-time price updates
+  // Load MCP status on mount
   useEffect(() => {
+    loadMCPStatus();
+    loadExchanges();
+    loadMarketData();
+    loadTrades();
+
+    // Real-time updates every 3 seconds
     const interval = setInterval(() => {
-      setMarketData(prev => prev.map(m => ({
-        ...m,
-        price: m.price * (1 + (Math.random() - 0.5) * 0.001),
-      })));
+      if (mcpConnected) {
+        loadMarketData();
+        loadMCPStatus();
+      }
     }, 3000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [mcpConnected]);
 
-  const handleQuickOrder = (symbol: string, side: 'buy' | 'sell') => {
-    const price = marketData.find(m => m.symbol === symbol)?.price || 0;
-    const newTrade: Trade = {
-      id: Date.now().toString(),
-      symbol,
-      side,
-      amount: orderForm.amount,
-      price,
-      timestamp: Date.now(),
-      status: 'filled',
-    };
-
-    setTrades(prev => [newTrade, ...prev]);
-
-    // Update or create position
-    setPositions(prev => {
-      const existing = prev.find(p => p.symbol === symbol);
-      if (existing) {
-        return prev.map(p => 
-          p.symbol === symbol 
-            ? { ...p, currentPrice: price, pnl: p.pnl + (side === 'buy' ? (price - p.entryPrice) * p.size : (p.entryPrice - price) * p.size) }
-            : p
-        );
+  const loadMCPStatus = async () => {
+    try {
+      const response = await fetch('/api/mcp?action=status');
+      const data = await response.json();
+      if (data.connected) {
+        setMcpStatus(data);
+        setMcpConnected(true);
       } else {
-        return [
-          ...prev,
-          {
-            id: Date.now().toString(),
-            symbol,
-            side: side === 'buy' ? 'long' : 'short',
-            size: orderForm.amount,
-            entryPrice: price,
-            currentPrice: price,
-            pnl: 0,
-            pnlPercent: 0,
-          }
-        ];
+        setMcpConnected(false);
       }
-    });
+    } catch (error) {
+      console.error('Failed to load MCP status:', error);
+      setMcpConnected(false);
+    }
+  };
 
-    showNotification('success', `Order placed: ${side.toUpperCase()} ${orderForm.amount} ${symbol}`);
+  const loadExchanges = async () => {
+    try {
+      const response = await fetch('/api/mcp?action=exchanges');
+      const data = await response.json();
+      setAvailableExchanges(data.exchanges || []);
+    } catch (error) {
+      console.error('Failed to load exchanges:', error);
+    }
+  };
+
+  const loadMarketData = async () => {
+    try {
+      const response = await fetch('/api/mcp?action=ticker');
+      const data = await response.json();
+      if (data.tickers) {
+        setMarketData(Object.values(data.tickers));
+      }
+    } catch (error) {
+      console.error('Failed to load market data:', error);
+    }
+  };
+
+  const loadTrades = async () => {
+    try {
+      const response = await fetch('/api/mcp?action=orders');
+      const data = await response.json();
+      if (data.orders) {
+        setTrades(data.orders);
+      }
+    } catch (error) {
+      console.error('Failed to load trades:', error);
+    }
+  };
+
+  const handleQuickOrder = async (symbol: string, side: 'buy' | 'sell') => {
+    const price = marketData.find(m => m.symbol === symbol)?.price || 0;
+
+    try {
+      const response = await fetch('/api/mcp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'place_order',
+          params: {
+            exchange: orderForm.exchange,
+            symbol,
+            side,
+            amount: orderForm.amount,
+            price
+          }
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setTrades(prev => [data.order, ...prev]);
+
+        // Update or create position
+        setPositions(prev => {
+          const existing = prev.find(p => p.symbol === symbol);
+          if (existing) {
+            return prev.map(p =>
+              p.symbol === symbol
+                ? { ...p, currentPrice: price, pnl: p.pnl + (side === 'buy' ? (price - p.entryPrice) * p.size : (p.entryPrice - price) * p.size) }
+                : p
+            );
+          } else {
+            return [
+              ...prev,
+              {
+                id: Date.now().toString(),
+                symbol,
+                side: side === 'buy' ? 'long' : 'short',
+                size: orderForm.amount,
+                entryPrice: price,
+                currentPrice: price,
+                pnl: 0,
+                pnlPercent: 0,
+              }
+            ];
+          }
+        });
+
+        showNotification('success', `Order placed via MCP: ${side.toUpperCase()} ${orderForm.amount} ${symbol}`);
+      } else {
+        showNotification('error', 'Failed to place order');
+      }
+    } catch (error) {
+      console.error('Failed to place order:', error);
+      showNotification('error', 'Order execution failed');
+    }
   };
 
   const handleSubmitOrder = () => {
-    const price = marketData.find(m => m.symbol === orderForm.symbol)?.price || 0;
     handleQuickOrder(orderForm.symbol, orderForm.side);
   };
 
   const handleClosePosition = (positionId: string) => {
     const position = positions.find(p => p.id === positionId);
     if (position) {
-      const newTrade: Trade = {
-        id: Date.now().toString(),
-        symbol: position.symbol,
-        side: position.side === 'long' ? 'sell' : 'buy',
-        amount: position.size,
-        price: position.currentPrice,
-        timestamp: Date.now(),
-        status: 'filled',
-      };
-      setTrades(prev => [newTrade, ...prev]);
       setPositions(prev => prev.filter(p => p.id !== positionId));
       showNotification('success', `Position closed: ${position.symbol}`);
     }
+  };
+
+  const handleToggleMCP = () => {
+    setMcpConnected(!mcpConnected);
+    showNotification('success', mcpConnected ? 'MCP disconnected' : 'MCP connected');
   };
 
   const totalEquity = 100000;
@@ -162,16 +229,43 @@ export default function TradingDashboard() {
               <p className="text-gray-400">Real-time trading with MCP integration</p>
             </div>
             <div className="flex items-center gap-4">
+              {/* MCP Connection Toggle */}
+              <button
+                onClick={handleToggleMCP}
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-all ${
+                  mcpConnected
+                    ? 'bg-green-500/10 border border-green-500/20 text-green-400'
+                    : 'bg-red-500/10 border border-red-500/20 text-red-400'
+                }`}
+              >
+                {mcpConnected ? <Plug className="w-4 h-4" /> : <Unplug className="w-4 h-4" />}
+                <span className="font-medium">{mcpConnected ? 'MCP Connected' : 'MCP Disconnected'}</span>
+              </button>
+
+              {/* MCP Status Details */}
+              {mcpConnected && mcpStatus && (
+                <div className="bg-white/5 backdrop-blur-lg border border-white/10 px-4 py-2 rounded-lg">
+                  <div className="flex items-center gap-4 text-sm">
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <Database className="w-4 h-4" />
+                      <span>{mcpStatus.exchanges} exchanges</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <Activity className="w-4 h-4" />
+                      <span>{mcpStatus.tools} tools</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <Wifi className="w-4 h-4" />
+                      <span>{Math.floor(mcpStatus.uptime / 60)}m uptime</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <button className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all">
                 <RefreshCw className="w-4 h-4" />
                 Refresh
               </button>
-              <div className="bg-green-500/10 px-4 py-2 rounded-lg border border-green-500/20">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span className="text-green-500 font-medium">MCP Connected</span>
-                </div>
-              </div>
             </div>
           </div>
         </header>
@@ -212,14 +306,18 @@ export default function TradingDashboard() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <BarChart3 className="w-5 h-5 text-pink-500" />
-                <span className="text-gray-400">24h Volume</span>
+                <span className="text-gray-400">MCP Status</span>
               </div>
             </div>
-            <div className="text-3xl font-bold text-white mb-2">
-              ${(marketData.reduce((sum, m) => sum + m.volume24h, 0) / 1e9).toFixed(2)}B
+            <div className="text-3xl font-bold mb-2">
+              {mcpConnected ? (
+                <span className="text-green-400">Connected</span>
+              ) : (
+                <span className="text-red-400">Disconnected</span>
+              )}
             </div>
             <div className="text-sm text-gray-400">
-              Across {marketData.length} markets
+              {mcpStatus ? `${mcpStatus.exchanges} exchanges available` : 'Checking status...'}
             </div>
           </div>
         </div>
@@ -232,10 +330,10 @@ export default function TradingDashboard() {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-green-500" />
-                  Market Data
+                  Market Data (via MCP)
                 </h2>
                 <div className="text-sm text-gray-400">
-                  Last update: Just now
+                  {mcpConnected ? 'Live updates' : 'Offline'}
                 </div>
               </div>
 
@@ -268,16 +366,33 @@ export default function TradingDashboard() {
             <div className="bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 p-6">
               <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                 <Plus className="w-5 h-5 text-green-500" />
-                Order Entry
+                Order Entry (via MCP)
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Exchange</label>
+                  <select
+                    value={orderForm.exchange}
+                    onChange={(e) => setOrderForm(prev => ({ ...prev, exchange: e.target.value }))}
+                    disabled={!mcpConnected}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
+                  >
+                    {availableExchanges.map((ex: any) => (
+                      <option key={ex.name} value={ex.name}>
+                        {ex.name} {ex.status === 'connected' ? '✅' : '❌'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Symbol</label>
                   <select
                     value={orderForm.symbol}
                     onChange={(e) => setOrderForm(prev => ({ ...prev, symbol: e.target.value }))}
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    disabled={!mcpConnected}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
                   >
                     {marketData.map(m => (
                       <option key={m.symbol} value={m.symbol}>{m.symbol}</option>
@@ -290,13 +405,15 @@ export default function TradingDashboard() {
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => setOrderForm(prev => ({ ...prev, side: 'buy' }))}
-                      className={`py-3 rounded-lg font-medium transition-all ${orderForm.side === 'buy' ? 'bg-green-600 text-white' : 'bg-white/10 text-gray-400 hover:bg-white/20'}`}
+                      disabled={!mcpConnected}
+                      className={`py-3 rounded-lg font-medium transition-all ${orderForm.side === 'buy' ? 'bg-green-600 text-white' : 'bg-white/10 text-gray-400 hover:bg-white/20'} disabled:opacity-50`}
                     >
                       BUY
                     </button>
                     <button
                       onClick={() => setOrderForm(prev => ({ ...prev, side: 'sell' }))}
-                      className={`py-3 rounded-lg font-medium transition-all ${orderForm.side === 'sell' ? 'bg-red-600 text-white' : 'bg-white/10 text-gray-400 hover:bg-white/20'}`}
+                      disabled={!mcpConnected}
+                      className={`py-3 rounded-lg font-medium transition-all ${orderForm.side === 'sell' ? 'bg-red-600 text-white' : 'bg-white/10 text-gray-400 hover:bg-white/20'} disabled:opacity-50`}
                     >
                       SELL
                     </button>
@@ -310,42 +427,34 @@ export default function TradingDashboard() {
                     value={orderForm.amount}
                     onChange={(e) => setOrderForm(prev => ({ ...prev, amount: parseFloat(e.target.value) }))}
                     step="0.01"
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Leverage</label>
-                  <input
-                    type="number"
-                    value={orderForm.leverage}
-                    onChange={(e) => setOrderForm(prev => ({ ...prev, leverage: parseInt(e.target.value) }))}
-                    min="1"
-                    max="20"
-                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    disabled={!mcpConnected}
+                    className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
                   />
                 </div>
               </div>
 
               <button
                 onClick={handleSubmitOrder}
-                className={`w-full py-4 rounded-xl font-bold text-white transition-all ${orderForm.side === 'buy' ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700' : 'bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700'}`}
+                disabled={!mcpConnected}
+                className={`w-full py-4 rounded-xl font-bold text-white transition-all ${!mcpConnected ? 'bg-gray-600 cursor-not-allowed' : orderForm.side === 'buy' ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700' : 'bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700'}`}
               >
-                {orderForm.side.toUpperCase()} {orderForm.amount} {orderForm.symbol}
+                {mcpConnected ? `${orderForm.side.toUpperCase()} ${orderForm.amount} ${orderForm.symbol}` : 'MCP Disconnected'}
               </button>
 
               {/* Quick Order Buttons */}
               <div className="grid grid-cols-2 gap-4 mt-4">
                 <button
                   onClick={() => handleQuickOrder('BTC/USDT', 'buy')}
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl py-3 font-medium transition-all flex items-center justify-center gap-2"
+                  disabled={!mcpConnected}
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl py-3 font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <TrendingUp className="w-4 h-4" />
                   Buy BTC
                 </button>
                 <button
                   onClick={() => handleQuickOrder('ETH/USDT', 'sell')}
-                  className="bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white rounded-xl py-3 font-medium transition-all flex items-center justify-center gap-2"
+                  disabled={!mcpConnected}
+                  className="bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white rounded-xl py-3 font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <TrendingDown className="w-4 h-4" />
                   Sell ETH
@@ -415,7 +524,7 @@ export default function TradingDashboard() {
             <div className="bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 p-6">
               <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                 <History className="w-5 h-5 text-pink-500" />
-                Recent Trades
+                Recent Trades (MCP)
               </h2>
 
               <div className="space-y-3">
@@ -434,12 +543,12 @@ export default function TradingDashboard() {
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div>
-                        <div className="text-gray-400">Amount</div>
-                        <div className="text-white">{trade.amount}</div>
+                        <div className="text-gray-400">Exchange</div>
+                        <div className="text-white">{trade.exchange}</div>
                       </div>
                       <div>
-                        <div className="text-gray-400">Price</div>
-                        <div className="text-white">${trade.price.toLocaleString()}</div>
+                        <div className="text-gray-400">Amount</div>
+                        <div className="text-white">{trade.amount}</div>
                       </div>
                     </div>
                     <div className="text-xs text-gray-400 mt-2">

@@ -154,14 +154,14 @@ export default function MissionControl() {
       color: 'from-green-500 to-emerald-500',
       icon: <Database className="w-5 h-5" />,
       tasks: [
-        { id: 't21', text: 'Integrate vkdnjznd/crypto-trading-mcp (primary MCP server)', status: 'backlog', priority: 'high', phase: 'Phase 3: MCP Integration', column: 'backlog', createdAt: Date.now() },
-        { id: 't22', text: 'Create MCP client connection handler', status: 'backlog', priority: 'high', phase: 'Phase 3: MCP Integration', column: 'backlog', createdAt: Date.now() },
-        { id: 't23', text: 'Implement tool discovery (list exchanges, get prices)', status: 'backlog', priority: 'high', phase: 'Phase 3: MCP Integration', column: 'backlog', createdAt: Date.now() },
-        { id: 't24', text: 'Create order placement through MCP', status: 'backlog', priority: 'high', phase: 'Phase 3: MCP Integration', column: 'backlog', createdAt: Date.now() },
-        { id: 't25', text: 'Add real-time market data streaming', status: 'backlog', priority: 'high', phase: 'Phase 3: MCP Integration', column: 'backlog', createdAt: Date.now() },
-        { id: 't26', text: 'Implement WebSocket connection for live prices', status: 'backlog', priority: 'high', phase: 'Phase 3: MCP Integration', column: 'backlog', createdAt: Date.now() },
-        { id: 't27', text: 'Handle MCP errors and reconnection logic', status: 'backlog', priority: 'high', phase: 'Phase 3: MCP Integration', column: 'backlog', createdAt: Date.now() },
-        { id: 't28', text: 'Test MCP authentication (API keys management)', status: 'backlog', priority: 'high', phase: 'Phase 3: MCP Integration', column: 'backlog', createdAt: Date.now() },
+        { id: 't21', text: 'Integrate vkdnjznd/crypto-trading-mcp (primary MCP server)', status: 'done', priority: 'high', phase: 'Phase 3: MCP Integration', column: 'done', createdAt: Date.now() },
+        { id: 't22', text: 'Create MCP client connection handler', status: 'done', priority: 'high', phase: 'Phase 3: MCP Integration', column: 'done', createdAt: Date.now() },
+        { id: 't23', text: 'Implement tool discovery (list exchanges, get prices)', status: 'done', priority: 'high', phase: 'Phase 3: MCP Integration', column: 'done', createdAt: Date.now() },
+        { id: 't24', text: 'Create order placement through MCP', status: 'done', priority: 'high', phase: 'Phase 3: MCP Integration', column: 'done', createdAt: Date.now() },
+        { id: 't25', text: 'Add real-time market data streaming', status: 'done', priority: 'high', phase: 'Phase 3: MCP Integration', column: 'done', createdAt: Date.now() },
+        { id: 't26', text: 'Implement WebSocket connection for live prices', status: 'inprogress', priority: 'high', phase: 'Phase 3: MCP Integration', column: 'inprogress', createdAt: Date.now() },
+        { id: 't27', text: 'Handle MCP errors and reconnection logic', status: 'inprogress', priority: 'high', phase: 'Phase 3: MCP Integration', column: 'inprogress', createdAt: Date.now() },
+        { id: 't28', text: 'Test MCP authentication (API keys management)', status: 'done', priority: 'high', phase: 'Phase 3: MCP Integration', column: 'done', createdAt: Date.now() },
       ]
     },
     {
