@@ -56,10 +56,28 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../src/app/trading/page.tsx
+{
+  type __IsExpected<Specific extends AppPageConfig<"/trading">> = Specific
+  const handler = {} as typeof import("../../src/app/trading/page.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 // Validate ../../src/app/api/kanban/route.ts
 {
   type __IsExpected<Specific extends RouteHandlerConfig<"/api/kanban">> = Specific
   const handler = {} as typeof import("../../src/app/api/kanban/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
+// Validate ../../src/app/api/trading/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/trading">> = Specific
+  const handler = {} as typeof import("../../src/app/api/trading/route.js")
   type __Check = __IsExpected<typeof handler>
   // @ts-ignore
   type __Unused = __Check

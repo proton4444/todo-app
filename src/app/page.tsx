@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { GripVertical, X, Plus, Play, Clock, BarChart3, Zap, Settings, FolderOpen, MoreVertical, TrendingUp, Activity, Shield, Database, Server, Key, ArrowUpRight, RefreshCw, AlertCircle, CheckCircle, Circle, Edit, Trash, Download, ExternalLink } from 'lucide-react';
+import { GripVertical, X, Plus, Play, Clock, BarChart3, Zap, Settings, FolderOpen, MoreVertical, TrendingUp, Activity, Shield, Database, Server, Key, ArrowUpRight, RefreshCw, AlertCircle, CheckCircle, Circle, Edit, Trash, Download, ExternalLink, LayoutDashboard, ArrowLeft } from 'lucide-react';
 
 type Task = {
   id: string;
@@ -116,16 +116,16 @@ export default function MissionControl() {
       color: 'from-orange-500 to-red-500',
       icon: <Zap className="w-5 h-5" />,
       tasks: [
-        { id: 't1', text: 'Create Next.js project structure', status: 'backlog', priority: 'high', phase: 'Phase 1: Project Initialization', column: 'backlog', createdAt: Date.now() },
-        { id: 't2', text: 'Initialize package.json with dependencies', status: 'backlog', priority: 'high', phase: 'Phase 1: Project Initialization', column: 'backlog', createdAt: Date.now() },
-        { id: 't3', text: 'Create TypeScript configuration (tsconfig.json, next.config.ts)', status: 'backlog', priority: 'high', phase: 'Phase 1: Project Initialization', column: 'backlog', createdAt: Date.now() },
-        { id: 't4', text: 'Create Tailwind CSS setup (tailwind.config.ts, globals.css)', status: 'backlog', priority: 'medium', phase: 'Phase 1: Project Initialization', column: 'backlog', createdAt: Date.now() },
-        { id: 't5', text: 'Create basic app layout (header, main, footer)', status: 'backlog', priority: 'medium', phase: 'Phase 1: Project Initialization', column: 'backlog', createdAt: Date.now() },
-        { id: 't6', text: 'Set up environment variables (.env.local for API keys)', status: 'backlog', priority: 'high', phase: 'Phase 1: Project Initialization', column: 'backlog', createdAt: Date.now() },
-        { id: 't7', text: 'Create placeholder components (TradingDashboard, OrderEntry, PositionsTable)', status: 'backlog', priority: 'medium', phase: 'Phase 1: Project Initialization', column: 'backlog', createdAt: Date.now() },
-        { id: 't8', text: 'Create API route structure (/api/trading, /api/market, /api/positions)', status: 'backlog', priority: 'medium', phase: 'Phase 1: Project Initialization', column: 'backlog', createdAt: Date.now() },
-        { id: 't9', text: 'Initialize Git repository with proper .gitignore', status: 'backlog', priority: 'medium', phase: 'Phase 1: Project Initialization', column: 'backlog', createdAt: Date.now() },
-        { id: 't10', text: 'Set up Docker configuration for testing', status: 'backlog', priority: 'low', phase: 'Phase 1: Project Initialization', column: 'backlog', createdAt: Date.now() }
+        { id: 't1', text: 'Create Next.js project structure', status: 'done', priority: 'high', phase: 'Phase 1: Project Initialization', column: 'done', createdAt: Date.now() },
+        { id: 't2', text: 'Initialize package.json with dependencies', status: 'done', priority: 'high', phase: 'Phase 1: Project Initialization', column: 'done', createdAt: Date.now() },
+        { id: 't3', text: 'Create TypeScript configuration (tsconfig.json, next.config.ts)', status: 'done', priority: 'high', phase: 'Phase 1: Project Initialization', column: 'done', createdAt: Date.now() },
+        { id: 't4', text: 'Create Tailwind CSS setup (tailwind.config.ts, globals.css)', status: 'done', priority: 'medium', phase: 'Phase 1: Project Initialization', column: 'done', createdAt: Date.now() },
+        { id: 't5', text: 'Create basic app layout (header, main, footer)', status: 'done', priority: 'medium', phase: 'Phase 1: Project Initialization', column: 'done', createdAt: Date.now() },
+        { id: 't6', text: 'Set up environment variables (.env.local for API keys)', status: 'done', priority: 'high', phase: 'Phase 1: Project Initialization', column: 'done', createdAt: Date.now() },
+        { id: 't7', text: 'Create placeholder components (TradingDashboard, OrderEntry, PositionsTable)', status: 'done', priority: 'medium', phase: 'Phase 1: Project Initialization', column: 'done', createdAt: Date.now() },
+        { id: 't8', text: 'Create API route structure (/api/trading, /api/market, /api/positions)', status: 'done', priority: 'medium', phase: 'Phase 1: Project Initialization', column: 'done', createdAt: Date.now() },
+        { id: 't9', text: 'Initialize Git repository with proper .gitignore', status: 'done', priority: 'medium', phase: 'Phase 1: Project Initialization', column: 'done', createdAt: Date.now() },
+        { id: 't10', text: 'Set up Docker configuration for testing', status: 'done', priority: 'low', phase: 'Phase 1: Project Initialization', column: 'done', createdAt: Date.now() }
       ]
     },
     {
@@ -135,16 +135,16 @@ export default function MissionControl() {
       color: 'from-purple-500 to-pink-500',
       icon: <Activity className="w-5 h-5" />,
       tasks: [
-        { id: 't11', text: 'Create main dashboard with market data', status: 'backlog', priority: 'high', phase: 'Phase 2: Core Trading Dashboard', column: 'backlog', createdAt: Date.now() },
-        { id: 't12', text: 'Implement order entry form (symbol, side, amount)', status: 'backlog', priority: 'high', phase: 'Phase 2: Core Trading Dashboard', column: 'backlog', createdAt: Date.now() },
-        { id: 't13', text: 'Create positions display table (symbol, side, size, PnL)', status: 'backlog', priority: 'high', phase: 'Phase 2: Core Trading Dashboard', column: 'backlog', createdAt: Date.now() },
-        { id: 't14', text: 'Implement recent trades history', status: 'backlog', priority: 'high', phase: 'Phase 2: Core Trading Dashboard', column: 'backlog', createdAt: Date.now() },
-        { id: 't15', text: 'Add quick order buttons (Buy BTC, Sell ETH)', status: 'backlog', priority: 'medium', phase: 'Phase 2: Core Trading Dashboard', column: 'backlog', createdAt: Date.now() },
-        { id: 't16', text: 'Create portfolio summary card (total PnL, open positions)', status: 'backlog', priority: 'medium', phase: 'Phase 2: Core Trading Dashboard', column: 'backlog', createdAt: Date.now() },
-        { id: 't17', text: 'Add refresh functionality (real-time updates)', status: 'backlog', priority: 'medium', phase: 'Phase 2: Core Trading Dashboard', column: 'backlog', createdAt: Date.now() },
-        { id: 't18', text: 'Implement responsive design (mobile, tablet, desktop)', status: 'backlog', priority: 'high', phase: 'Phase 2: Core Trading Dashboard', column: 'backlog', createdAt: Date.now() },
-        { id: 't19', text: 'Add dark mode support with gradient background', status: 'backlog', priority: 'medium', phase: 'Phase 2: Core Trading Dashboard', column: 'backlog', createdAt: Date.now() },
-        { id: 't20', text: 'Create API endpoints in Mission Control for trading', status: 'backlog', priority: 'medium', phase: 'Phase 2: Core Trading Dashboard', column: 'backlog', createdAt: Date.now() },
+        { id: 't11', text: 'Create main dashboard with market data', status: 'done', priority: 'high', phase: 'Phase 2: Core Trading Dashboard', column: 'done', createdAt: Date.now() },
+        { id: 't12', text: 'Implement order entry form (symbol, side, amount)', status: 'done', priority: 'high', phase: 'Phase 2: Core Trading Dashboard', column: 'done', createdAt: Date.now() },
+        { id: 't13', text: 'Create positions display table (symbol, side, size, PnL)', status: 'done', priority: 'high', phase: 'Phase 2: Core Trading Dashboard', column: 'done', createdAt: Date.now() },
+        { id: 't14', text: 'Implement recent trades history', status: 'done', priority: 'high', phase: 'Phase 2: Core Trading Dashboard', column: 'done', createdAt: Date.now() },
+        { id: 't15', text: 'Add quick order buttons (Buy BTC, Sell ETH)', status: 'done', priority: 'medium', phase: 'Phase 2: Core Trading Dashboard', column: 'done', createdAt: Date.now() },
+        { id: 't16', text: 'Create portfolio summary card (total PnL, open positions)', status: 'done', priority: 'medium', phase: 'Phase 2: Core Trading Dashboard', column: 'done', createdAt: Date.now() },
+        { id: 't17', text: 'Add refresh functionality (real-time updates)', status: 'done', priority: 'medium', phase: 'Phase 2: Core Trading Dashboard', column: 'done', createdAt: Date.now() },
+        { id: 't18', text: 'Implement responsive design (mobile, tablet, desktop)', status: 'done', priority: 'high', phase: 'Phase 2: Core Trading Dashboard', column: 'done', createdAt: Date.now() },
+        { id: 't19', text: 'Add dark mode support with gradient background', status: 'done', priority: 'medium', phase: 'Phase 2: Core Trading Dashboard', column: 'done', createdAt: Date.now() },
+        { id: 't20', text: 'Create API endpoints in Mission Control for trading', status: 'done', priority: 'medium', phase: 'Phase 2: Core Trading Dashboard', column: 'done', createdAt: Date.now() },
       ]
     },
     {
@@ -306,6 +306,15 @@ export default function MissionControl() {
               </div>
 
               <div className="flex items-center gap-6">
+                {/* Trading Dashboard Link */}
+                <a
+                  href="/trading"
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg px-4 py-2 transition-all hover:from-green-700 to-emerald-700 flex items-center gap-2"
+                >
+                  <LayoutDashboard className="w-5 h-5" />
+                  <span className="font-medium">Trading Dashboard</span>
+                </a>
+
                 {/* MCP Status */}
                 <div className="flex items-center gap-2 bg-green-500/10 px-4 py-2 rounded-lg">
                   <Database className="w-4 h-4 text-green-600 dark:text-green-400" />
@@ -619,5 +628,5 @@ export default function MissionControl() {
         </main>
         </div>
       </DndProvider>
-    );
+  );
 }
