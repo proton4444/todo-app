@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'Invalid request' });
   } catch (error) {
     console.error('Error saving tasks:', error);
-    return NextResponse.json({ success: false, error: error.message });
+    return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
   }
 }
 
@@ -153,5 +153,6 @@ async function saveKanbanFile(tasks: Task[]): Promise<void> {
     await writeFile(KANBAN_PATH, newLines.join('\n'), 'utf-8');
   } catch (error) {
     console.error('Error saving kanban.md:', error);
+    throw error;
   }
 }
