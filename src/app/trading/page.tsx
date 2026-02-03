@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowUpRight,
   ArrowDownLeft,
@@ -25,6 +25,32 @@ import {
 import type { MCPStatus, OrderForm } from '@/lib/trading/types';
 import { TradingProvider, useTradingStore } from '@/lib/trading/store';
 import { normalizeTrades } from '@/lib/trading/normalize';
+
+function toCsv(rows: string[][]) {
+  const escape = (val: string) => {
+    const s = val ?? '';
+    if (s.includes('"') || s.includes(',') || s.includes('\n') || s.includes('\r')) {
+      return `"${s.replace(/"/g, '""')}"`;
+    }
+    return s;
+  };
+
+  return rows.map((r) => r.map(escape).join(',')).join('\n');
+}
+
+function downloadTextFile(filename: string, content: string, mime = 'text/plain') {
+  if (typeof window === 'undefined') return;
+
+  const blob = new Blob([content], { type: `${mime};charset=utf-8` });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
 
 function TradingDashboardInner() {
   const { state, actions } = useTradingStore();
@@ -318,6 +344,30 @@ function TradingDashboardInner() {
   const totalEquity = 100000;
   const totalPnl = positions.reduce((sum, p) => sum + p.pnl, 0);
   const openPositions = positions.length;
+
+  const exportTradesCsv = () => {
+    const header = ['id', 'exchange', 'symbol', 'side', 'amount', 'price', 'status', 'timestamp', 'datetime'];
+
+    const rows: string[][] = [header];
+    for (const t of trades) {
+      rows.push([
+        t.id,
+        t.exchange,
+        t.symbol,
+        t.side,
+        String(t.amount),
+        String(t.price),
+        t.status,
+        String(t.timestamp),
+        new Date(t.timestamp).toISOString(),
+      ]);
+    }
+
+    const csv = toCsv(rows);
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    downloadTextFile(`trades-${stamp}.csv`, csv, 'text/csv');
+    showNotification('success', `Exported ${trades.length} trades to CSV`);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -641,10 +691,20 @@ function TradingDashboardInner() {
 
             {/* Recent Trades */}
             <div className="bg-white/5 backdrop-blur-lg rounded-2xl border border-white/10 p-6">
-              <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                <History className="w-5 h-5 text-pink-500" />
-                Recent Trades (MCP)
-              </h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <History className="w-5 h-5 text-pink-500" />
+                  Recent Trades (MCP)
+                </h2>
+
+                <button
+                  onClick={exportTradesCsv}
+                  disabled={trades.length === 0}
+                  className="text-sm bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Export CSV
+                </button>
+              </div>
 
               <div className="space-y-3">
                 {trades.slice(0, 5).map((trade) => (
