@@ -25,10 +25,10 @@
 - **Action:** Always recommend manual Vercel deployment first - browser automation is unreliable on this environment
 
 ## BMad Method Configuration
-**Simplified Model Strategy (GLM 4.7 for All Tasks)**
-- **Decision:** No brain vs muscles routing - use GLM 4.7 for everything
-- **Rationale:** Simpler, faster, works well for all task types
-- **Date:** 2026-02-01 (simplified from complex multi-model routing)
+**Model Strategy (openai-codex/gpt-5.2)**
+- **Primary:** openai-codex/gpt-5.2 via ChatGPT sub auth
+- **Fallbacks:** openrouter/google/gemma-3-27b-it:free, openrouter/meta-llama/llama-3.3-70b-instruct:free
+- **Date:** 2026-02-03 (switched from zai/glm-4.7 to openai-codex)
 
 **Agent Skills (6 Created):**
 - `/bmad-main` - PM agent (product management, requirements)
@@ -140,10 +140,15 @@
 ## Key Insights & Lessons
 1. **Browser Automation on Headless Linux:** Not reliable - always use manual deployment
 2. **Manual Deployment > Automation:** Vercel manual is 95% reliable, faster (2-3 minutes)
-3. **GLM 4.7 Strategy:** Simplified to single model (no complex routing) - works well
+3. **Model Strategy:** openai-codex/gpt-5.2 via ChatGPT sub auth (switched 2026-02-03)
 4. **Kanban Tracking:** Effective for project management, 42 tasks completed
 5. **Proactive Mode:** Cron jobs + overnight work = productive autonomous assistant
 6. **Mac Mini Solution:** Would solve browser automation issues permanently (GUI environment)
+7. **JSX Best Practices (2026-02-03):**
+   - Always match opening/closing tags with the SAME name for semantic HTML (<header></header>, <main></main>)
+   - Don't close semantic tags as </div> - this breaks the DOM structure
+   - Define all functions/constants BEFORE using them (showNotification, COLUMN_TITLES, etc.)
+   - RUN BUILD before pushing - catch errors early
 
 ## Files Created/Modified
 **Skills (BMad Method):**
@@ -167,17 +172,65 @@
 - `kanban.md`
 - `web/kanban.html`
 
+## Professional Trading Agent Development (2026-02-03)
+**Project Overview:**
+- Building full-featured cryptocurrency trading bot with MCP integration
+- 10 phases, 66 total tasks
+- Currently at 42% completion (28/66 tasks done)
+- GitHub: https://github.com/proton4444/todo-app
+- Vercel: https://todo-app-umber-chi-47.vercel.app/
+
+**Completed Phases:**
+- ✅ Phase 1: Project Initialization (100% - 10/10 tasks)
+  - Next.js 16.1.6, React 19.2.3, TypeScript 5.7.2
+  - Tailwind CSS 4.0.0, Lucide React Icons 0.400.0
+- ✅ Phase 2: Core Trading Dashboard (100% - 10/10 tasks)
+  - /trading page with market data, order entry, positions, trades
+  - Portfolio summary, quick order buttons, real-time updates
+  - Dark gradient theme, responsive design
+- ⏳ Phase 3: MCP Integration (75% - 6/8 tasks done)
+  - /api/mcp endpoint with 7 MCP tools
+  - Support for 3 exchanges (Binance, Upbit, Gate.io)
+  - MCP connection toggle, status panel, exchange selection
+  - Docs: docs/MCP_INTEGRATION_GUIDE.md
+
+**MCP Integration Details:**
+- Server: vkdnjznd/crypto-trading-mcp (Python-based)
+- Tools: list_exchanges, get_price, place_order, cancel_order, get_positions, get_order_history, subscribe_ticker
+- Current: Simulated data via polling (3s refresh)
+- Planned: WebSocket for real-time push updates
+
+**Access URLs:**
+- Mission Control: https://todo-app-umber-chi-47.vercel.app/
+- Trading Dashboard: https://todo-app-umber-chi-47.vercel.app/trading
+
+**Next Priorities (Trading Bot):**
+1. ⏳ Complete Phase 3: WebSocket connection + error handling
+2. ⏳ Phase 4: Data Layer (8 tasks, 1.5 hours)
+3. ⏳ Phase 5: Strategy Layer (Alpha Arena integration)
+4. ⏳ Phase 6: Risk Management (VaR, position sizing)
+
 ## Next Priorities
 1. ⏳ Complete Vercel deployment (manual env vars - user action)
 2. ⏳ Configure Mac Mini if purchased (setup guide)
 3. ⏳ Overnight batch processing (proactive mode)
 4. ⏳ Daily kanban summary (9 AM UTC)
 
+## Future Tech to Explore
+**PostgreSQL as a Distributed Cache (2026-02-03):**
+- Use unlogged tables as key-value cache layer (bypasses WAL for 30% faster writes)
+- Eliminates Redis dependency, simplifies stack
+- Tradeoff: cache data lost on crash (acceptable for caching)
+- Use cases: multi-instance deployments, rate limiting, API response caching
+- Node.js equivalents: `node-pg-memoize`, custom unlogged tables
+- Reference: "PostgreSQL as a Distributed Cache" by Milan Jovanović
+
 ## Remember This for Future Sessions
 - **Environment:** Headless Linux - browser automation unreliable
 - **Always:** Recommend manual Vercel deployment first (95% success)
-- **Model:** GLM 4.7 for all tasks (simplified)
+- **Model:** openai-codex/gpt-5.2 via ChatGPT sub auth
 - **Cron:** 9 AM UTC daily triggers
 - **BMad:** Use parallel planning for new features
 - **Kanban:** Use batch commands for efficiency
 - **Proactive:** Works overnight - check morning for progress
+- **JSX Rule:** Match tags exactly, define before use, BUILD before push
