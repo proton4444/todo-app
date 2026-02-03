@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ArrowUpRight, ArrowDownLeft, RefreshCw, Plus, Minus, TrendingUp, TrendingDown, Wallet, Activity, History, BarChart3, CheckCircle, AlertCircle, Database, Wifi, WifiOff, Settings, Plug, Unplug, X } from 'lucide-react';
 
 type MarketData = {
@@ -46,6 +46,9 @@ type MCPStatus = {
   exchanges: number;
   tools: number;
   uptime: number;
+  lastError?: any;
+  connectionRetryCount?: number;
+  activeSubscriptions?: number;
 };
 
 export default function TradingDashboard() {
@@ -63,6 +66,10 @@ export default function TradingDashboard() {
     leverage: 1,
   });
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string, visible: boolean }>({ type: 'success', message: '', visible: false });
+  const [usingSSE, setUsingSSE] = useState(false);
+  const [lastUpdateTime, setLastUpdateTime] = useState<number>(Date.now());
+
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message, visible: true });
@@ -73,19 +80,66 @@ export default function TradingDashboard() {
   useEffect(() => {
     loadMCPStatus();
     loadExchanges();
-    loadMarketData();
     loadTrades();
 
-    // Real-time updates every 3 seconds
-    const interval = setInterval(() => {
-      if (mcpConnected) {
-        loadMarketData();
-        loadMCPStatus();
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
       }
-    }, 3000);
+    };
+  }, []);
 
-    return () => clearInterval(interval);
-  }, [mcpConnected]);
+  // Setup SSE connection when MCP is connected
+  useEffect(() => {
+    if (mcpConnected && !usingSSE) {
+      connectSSE();
+    } else if (!mcpConnected && eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+      setUsingSSE(false);
+    }
+  }, [mcpConnected, usingSSE]);
+
+  const connectSSE = () => {
+    try {
+      const eventSource = new EventSource('/api/mcp?action=stream');
+      eventSourceRef.current = eventSource;
+      setUsingSSE(true);
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+
+          if (data.type === 'connected') {
+            console.log('SSE Connected:', data);
+            setMarketData(Object.values(data.tickers));
+            showNotification('success', 'Real-time data stream connected');
+          } else if (data.type === 'ticker_update') {
+            setMarketData(Object.values(data.tickers));
+            setLastUpdateTime(Date.now());
+          } else if (data.type === 'error') {
+            console.error('SSE Error:', data.error);
+            showNotification('error', `Stream error: ${data.error.message}`);
+          }
+        } catch (error) {
+          console.error('Failed to parse SSE data:', error);
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error('SSE connection error:', error);
+        showNotification('error', 'Real-time stream connection lost');
+        eventSource.close();
+        setUsingSSE(false);
+      };
+
+      showNotification('success', 'Connecting to real-time data stream...');
+    } catch (error) {
+      console.error('Failed to establish SSE connection:', error);
+      showNotification('error', 'Failed to connect to real-time stream');
+      setUsingSSE(false);
+    }
+  };
 
   const loadMCPStatus = async () => {
     try {
@@ -110,18 +164,6 @@ export default function TradingDashboard() {
       setAvailableExchanges(data.exchanges || []);
     } catch (error) {
       console.error('Failed to load exchanges:', error);
-    }
-  };
-
-  const loadMarketData = async () => {
-    try {
-      const response = await fetch('/api/mcp?action=ticker');
-      const data = await response.json();
-      if (data.tickers) {
-        setMarketData(Object.values(data.tickers));
-      }
-    } catch (error) {
-      console.error('Failed to load market data:', error);
     }
   };
 
@@ -189,7 +231,7 @@ export default function TradingDashboard() {
 
         showNotification('success', `Order placed via MCP: ${side.toUpperCase()} ${orderForm.amount} ${symbol}`);
       } else {
-        showNotification('error', 'Failed to place order');
+        showNotification('error', data.error || 'Failed to place order');
       }
     } catch (error) {
       console.error('Failed to place order:', error);
@@ -209,9 +251,24 @@ export default function TradingDashboard() {
     }
   };
 
-  const handleToggleMCP = () => {
-    setMcpConnected(!mcpConnected);
-    showNotification('success', mcpConnected ? 'MCP disconnected' : 'MCP connected');
+  const handleToggleMCP = async () => {
+    try {
+      const response = await fetch('/api/mcp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'toggle_connection',
+          params: { connected: !mcpConnected }
+        })
+      });
+
+      const data = await response.json();
+      setMcpConnected(data.connected);
+      showNotification('success', data.message);
+    } catch (error) {
+      console.error('Failed to toggle MCP:', error);
+      showNotification('error', 'Failed to toggle MCP connection');
+    }
   };
 
   const totalEquity = 100000;
@@ -255,14 +312,17 @@ export default function TradingDashboard() {
                       <span>{mcpStatus.tools} tools</span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-400">
-                      <Wifi className="w-4 h-4" />
+                      <Wifi className={`w-4 h-4 ${usingSSE ? 'text-green-400' : 'text-yellow-400'}`} />
+                      <span>{usingSSE ? 'SSE Live' : 'Polling'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-400">
                       <span>{Math.floor(mcpStatus.uptime / 60)}m uptime</span>
                     </div>
                   </div>
                 </div>
               )}
 
-              <button className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all">
+              <button className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all" onClick={loadMCPStatus}>
                 <RefreshCw className="w-4 h-4" />
                 Refresh
               </button>
@@ -306,18 +366,20 @@ export default function TradingDashboard() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <BarChart3 className="w-5 h-5 text-pink-500" />
-                <span className="text-gray-400">MCP Status</span>
+                <span className="text-gray-400">Data Stream</span>
               </div>
             </div>
             <div className="text-3xl font-bold mb-2">
               {mcpConnected ? (
-                <span className="text-green-400">Connected</span>
+                <span className={usingSSE ? 'text-green-400' : 'text-yellow-400'}>
+                  {usingSSE ? 'Live SSE' : 'Polling'}
+                </span>
               ) : (
-                <span className="text-red-400">Disconnected</span>
+                <span className="text-red-400">Offline</span>
               )}
             </div>
             <div className="text-sm text-gray-400">
-              {mcpStatus ? `${mcpStatus.exchanges} exchanges available` : 'Checking status...'}
+              {usingSSE ? 'Real-time updates (1s)' : 'Every 3 seconds'}
             </div>
           </div>
         </div>
@@ -332,8 +394,12 @@ export default function TradingDashboard() {
                   <TrendingUp className="w-5 h-5 text-green-500" />
                   Market Data (via MCP)
                 </h2>
-                <div className="text-sm text-gray-400">
-                  {mcpConnected ? 'Live updates' : 'Offline'}
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  {usingSSE && <Wifi className="w-4 h-4 text-green-400" />}
+                  <span>{mcpConnected ? (usingSSE ? 'Live SSE' : 'Polling') : 'Offline'}</span>
+                  <span className="text-xs">
+                    ({Math.floor((Date.now() - lastUpdateTime) / 1000)}s ago)
+                  </span>
                 </div>
               </div>
 
