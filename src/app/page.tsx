@@ -53,7 +53,7 @@ export default function MissionControl() {
     }
   };
 
-  const addTask = (text: string, phase: string, priority: 'high' | 'medium' | 'low') => {
+  const addTask = async (text: string, phase: string, priority: 'high' | 'medium' | 'low') => {
     const newTask: Task = {
       id: Date.now().toString(),
       text,
@@ -80,7 +80,7 @@ export default function MissionControl() {
     }
   };
 
-  const moveTask = (taskId: string, toColumn: Column) => {
+  const moveTask = async (taskId: string, toColumn: Column) => {
     const task = tasks.find(t => t.id === taskId);
     if (task) {
       const updatedTasks = tasks.map(t =>
@@ -216,7 +216,7 @@ export default function MissionControl() {
       icon: <CheckCircle className="w-5 h-5" />,
       tasks: [
         { id: 't61', text: 'Set up Playwright testing environment', status: 'backlog', priority: 'high', phase: 'Phase 7: Testing & Validation', column: 'backlog', createdAt: Date.now() },
-        { id: "t62', text: 'Create E2E test cases (happy path, error cases, edge cases)', status: 'backlog', priority: 'high', phase: 'Phase 7: Testing & Validation', column: 'backlog', createdAt: Date.now() },
+        {  id: 't62', text: 'Create E2E test cases (happy path, error cases, edge cases)', status: 'backlog', priority: 'high', phase: 'Phase 7: Testing & Validation', column: 'backlog', createdAt: Date.now() },
         { id: 't63', text: 'Create performance tests (load times, render times)', status: 'backlog', priority: 'medium', phase: 'Phase 7: Testing & Validation', column: 'backlog', createdAt: Date.now() },
         { id: 't64', text: 'Perform load testing (simulated 100+ concurrent users)', status: 'backlog', priority: 'medium', phase: 'Phase 7: Testing & Validation', column: 'backlog', createdAt: Date.now() },
         { id: 't65', text: 'Create stress testing suite (high frequency trading, volatile markets)', status: 'backlog', priority: 'high', phase: 'Phase 7: Testing & Validation', column: 'backlog', createdAt: Date.now() },
