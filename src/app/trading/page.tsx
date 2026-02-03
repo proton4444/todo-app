@@ -159,7 +159,26 @@ function TradingDashboardInner() {
   };
 
   const handleQuickOrder = async (symbol: string, side: 'buy' | 'sell') => {
+    if (!mcpConnected) {
+      showNotification('error', 'MCP is disconnected');
+      return;
+    }
+
+    if (!symbol) {
+      showNotification('error', 'Select a symbol');
+      return;
+    }
+
+    if (!Number.isFinite(orderForm.amount) || orderForm.amount <= 0) {
+      showNotification('error', 'Amount must be greater than 0');
+      return;
+    }
+
     const price = marketData.find((m) => m.symbol === symbol)?.price || 0;
+    if (!Number.isFinite(price) || price <= 0) {
+      showNotification('error', 'No valid price available for this symbol yet');
+      return;
+    }
 
     try {
       const response = await fetch('/api/mcp', {
@@ -186,16 +205,21 @@ function TradingDashboardInner() {
         actions.setPositions(
           (() => {
             const existing = positions.find((p) => p.symbol === symbol);
+
             if (existing) {
-              return positions.map((p) =>
-                p.symbol === symbol
-                  ? {
-                      ...p,
-                      currentPrice: price,
-                      pnl: p.pnl + (side === 'buy' ? (price - p.entryPrice) * p.size : (p.entryPrice - price) * p.size),
-                    }
-                  : p
-              );
+              // NOTE: For now we keep it simple: we don't net positions across sides or weighted-average entries.
+              const updated = positions.map((p) => {
+                if (p.symbol !== symbol) return p;
+
+                const currentPrice = price;
+                const pnl = p.side === 'long' ? (currentPrice - p.entryPrice) * p.size : (p.entryPrice - currentPrice) * p.size;
+                const notional = p.entryPrice * p.size;
+                const pnlPercent = notional > 0 ? (pnl / notional) * 100 : 0;
+
+                return { ...p, currentPrice, pnl, pnlPercent };
+              });
+
+              return updated;
             }
 
             return [
@@ -255,6 +279,36 @@ function TradingDashboardInner() {
       showNotification('error', 'Failed to toggle MCP connection');
     }
   };
+
+  // Reprice positions from the latest market data whenever tickers update
+  useEffect(() => {
+    if (!positions.length) return;
+    if (!marketData.length) return;
+
+    const nextPositions = positions.map((p) => {
+      const latest = marketData.find((m) => m.symbol === p.symbol);
+      if (!latest || !Number.isFinite(latest.price) || latest.price <= 0) return p;
+
+      const currentPrice = latest.price;
+      const pnl = p.side === 'long' ? (currentPrice - p.entryPrice) * p.size : (p.entryPrice - currentPrice) * p.size;
+      const notional = p.entryPrice * p.size;
+      const pnlPercent = notional > 0 ? (pnl / notional) * 100 : 0;
+
+      return { ...p, currentPrice, pnl, pnlPercent };
+    });
+
+    const changed = nextPositions.some((p, idx) => {
+      const prev = positions[idx];
+      return (
+        p.currentPrice !== prev.currentPrice ||
+        p.pnl !== prev.pnl ||
+        p.pnlPercent !== prev.pnlPercent
+      );
+    });
+
+    if (changed) actions.setPositions(nextPositions);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [marketData]);
 
   const totalEquity = 100000;
   const totalPnl = positions.reduce((sum, p) => sum + p.pnl, 0);
