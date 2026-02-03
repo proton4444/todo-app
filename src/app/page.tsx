@@ -373,6 +373,7 @@ export default function MissionControl() {
                               {stats.done}/{stats.total}
                             </div>
                         </div>
+                        </div>
                       </button>
 
                       {/* Progress Bar */}
