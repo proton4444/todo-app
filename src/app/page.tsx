@@ -16,6 +16,7 @@ type Task = {
 };
 
 type Column = 'backlog' | 'inprogress' | 'done';
+const COLUMN_TITLES: Record<Column, string> = {  backlog: "Backlog",  inprogress: "In Progress",  done: "Done",};
 
 type Phase = {
   id: string;
@@ -34,6 +35,10 @@ export default function MissionControl() {
   const [quickAddText, setQuickAddText] = useState('');
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string, visible: boolean }>({ type: 'success', message: '', visible: false });
 
+  const showNotification = (type: 'success' | 'error', message: string) => {
+    setNotification({ type, message, visible: true });
+    setTimeout(() => setNotification(prev => ({ ...prev, visible: false })), 3000);
+  };
   // Load tasks from API on mount
   useEffect(() => {
     loadTasks();
@@ -84,7 +89,7 @@ export default function MissionControl() {
     const task = tasks.find(t => t.id === taskId);
     if (task) {
       const updatedTasks = tasks.map(t =>
-        t.id === taskId ? { ...t, status: toColumn === 'done' ? 'done' : 'inprogress', column: toColumn, phase: toColumn } : t
+        t.id === taskId ? { ...t, status: (toColumn === 'done' ? 'done' : 'inprogress') as 'backlog' | 'inprogress' | 'done', column: toColumn, phase: toColumn } : t
       );
       await saveTasks(updatedTasks);
     }
@@ -425,7 +430,6 @@ export default function MissionControl() {
                         );
                       })()
                     : 'Backlog'}
-                  }
                 </h2>
 
                 {/* Phase Stats Detail */}
@@ -611,8 +615,9 @@ export default function MissionControl() {
                 </div>
               </div>
             </div>
-          </div>
+          </footer>
+        </main>
         </div>
-      </div>
+      </DndProvider>
     );
 }
