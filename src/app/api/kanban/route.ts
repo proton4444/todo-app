@@ -1,104 +1,157 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
+import { existsSync } from 'fs';
 
-const KANBAN_PATH = join(process.cwd(), '../../kanban.md');
+const KANBAN_PATH = join(process.cwd(), 'kanban.md');
 
-export async function GET() {
+// Define proper task types
+type Task = {
+  id: string;
+  text: string;
+  phase: string;
+  status: 'backlog' | 'inprogress' | 'done';
+  priority: 'high' | 'medium' | 'low';
+  column: 'backlog' | 'inprogress' | 'done';
+  createdAt: number;
+};
+
+// Parse kanban.md file to extract tasks
+async function parseKanbanFile(): Promise<Task[]> {
   try {
     const md = await readFile(KANBAN_PATH, 'utf-8');
-    
-    // Simple parsing
-    const tasks: Array<{ id: string; text: string; column: 'backlog' | 'inprogress' | 'done'; createdAt: number }> = [];
-    const now = Date.now();
-    
-    const sections = {
-      backlog: [] as string[],
-      inprogress: [] as string[],
-      done: [] as string[]
-    };
-    
-    let currentSection: 'backlog' | 'inprogress' | 'done' | null = null;
     const lines = md.split('\n');
+    const tasks: Task[] = [];
     
+    let currentPhase = '';
+    let taskIdCounter = Date.now();
+
     for (const line of lines) {
       const trimmed = line.trim();
       
-      if (trimmed.startsWith('## Backlog')) {
-        currentSection = 'backlog';
-      } else if (trimmed.startsWith('## In Progress')) {
-        currentSection = 'inprogress';
-      } else if (trimmed.startsWith('## Done')) {
-        currentSection = 'done';
-      } else if (currentSection && trimmed.startsWith('- [x]')) {
-        const text = trimmed.replace('- [x]', '').trim();
-        if (text && currentSection === 'done') {
-          sections.done.push(text);
+      // Check for phase headers
+      if (trimmed.startsWith('### Phase') || trimmed.startsWith('## ')) {
+        const match = trimmed.match(/Phase (\d+):/);
+        if (match && match[1]) {
+          currentPhase = `phase${match[1].trim()}`;
         }
-      } else if (currentSection && trimmed.startsWith('- [ ]')) {
-        const text = trimmed.replace('- [ ]', '').trim();
-        if (text) {
-          if (currentSection === 'backlog') {
-            sections.backlog.push(text);
-          } else if (currentSection === 'inprogress') {
-            sections.inprogress.push(text);
-          }
+        continue;
+      }
+      
+      // Check for task items
+      if (trimmed.startsWith('- [')) {
+        const match = trimmed.match(/\[(.*?)\]/);
+        if (match) {
+          const text = match[1];
+          const id = `t${taskIdCounter++}`;
+          const status = trimmed.includes('x]') ? 'done' : 'backlog';
+          
+          tasks.push({
+            id,
+            text,
+            phase: currentPhase || 'Phase 1',
+            status,
+            priority: 'medium',
+            column: status,
+            createdAt: Date.now()
+          });
         }
       }
     }
     
-    // Convert to task objects
-    sections.backlog.forEach((text, idx) => {
-      tasks.push({ id: `backlog-${now}-${idx}`, text, column: 'backlog', createdAt: now });
-    });
-    sections.inprogress.forEach((text, idx) => {
-      tasks.push({ id: `inprogress-${now}-${idx}`, text, column: 'inprogress', createdAt: now });
-    });
-    sections.done.forEach((text, idx) => {
-      tasks.push({ id: `done-${now}-${idx}`, text, column: 'done', createdAt: now });
-    });
-    
-    return NextResponse.json({ tasks });
+    return tasks;
   } catch (error) {
-    console.error('Error reading kanban.md:', error);
-    return NextResponse.json({ tasks: [] }, { status: 200 });
+    console.error('Error parsing kanban.md:', error);
+    return [];
   }
 }
 
-export async function POST(request: NextRequest) {
+// GET endpoint - Retrieve all tasks
+export async function GET(req: NextRequest) {
+  const tasks = await parseKanbanFile();
+  return NextResponse.json({ tasks });
+}
+
+// POST endpoint - Save all tasks
+export async function POST(req: NextRequest) {
   try {
-    const { tasks } = await request.json();
+    const body = await req.json();
+    const { tasks, task } = body;
     
-    // Convert tasks back to markdown
-    const sections = {
-      backlog: tasks.filter((t: any) => t.column === 'backlog').map((t: any) => t.text),
-      inprogress: tasks.filter((t: any) => t.column === 'inprogress').map((t: any) => t.text),
-      done: tasks.filter((t: any) => t.column === 'done').map((t: any) => t.text)
-    };
+    if (task) {
+      // Add a single task
+      const currentTasks = await parseKanbanFile();
+      const newTasks = [...currentTasks, task];
+      await saveKanbanFile(newTasks);
+      return NextResponse.json({ success: true, tasks: newTasks });
+    } else if (tasks) {
+      // Save all tasks
+      await saveKanbanFile(tasks);
+      return NextResponse.json({ success: true, tasks });
+    }
     
-    const md = `# Kanban Board for Ribe (@knosso79)
-
-Updated: ${new Date().toISOString()}
-
-## Backlog
-${sections.backlog.map((t: string) => `- [ ] ${t}`).join('\n')}
-
-## In Progress
-${sections.inprogress.map((t: string) => `- [ ] ${t}`).join('\n')}
-
-## Done
-${sections.done.map((t: string) => `- [x] ${t}`).join('\n')}
-
-## Notes
-- Ask me to "add [task]" to backlog, "move [task] to inprogress/done", or "show kanban" for summary.
-- I'll update kanban.md in workspace.
-`;
-    
-    await writeFile(KANBAN_PATH, md, 'utf-8');
-    
-    return NextResponse.json({ success: true, tasks });
+    return NextResponse.json({ success: false, error: 'Invalid request' });
   } catch (error) {
-    console.error('Error writing kanban.md:', error);
-    return NextResponse.json({ error: 'Failed to save tasks' }, { status: 500 });
+    console.error('Error saving tasks:', error);
+    return NextResponse.json({ success: false, error: error.message });
+  }
+}
+
+// Helper function to save tasks to kanban.md
+async function saveKanbanFile(tasks: Task[]): Promise<void> {
+  try {
+    const md = await readFile(KANBAN_PATH, 'utf-8');
+    const lines = md.split('\n');
+    const newLines: string[] = [];
+    
+    // Keep header sections
+    for (const line of lines) {
+      if (line.startsWith('#') || line.startsWith('##') || line.startsWith('---')) {
+        newLines.push(line);
+      }
+    }
+    
+    // Add Backlog section
+    const backlogTasks = tasks.filter(t => t.column === 'backlog');
+    if (backlogTasks.length > 0) {
+      newLines.push('## Backlog');
+      backlogTasks.forEach(task => {
+        const checkbox = task.status === 'done' ? 'x' : ' ';
+        newLines.push(`- [${checkbox}] ${task.id}: ${task.text} ${task.status !== 'done' ? `(${task.phase})` : `✅ ${task.phase}`}`);
+      });
+    }
+    
+    // Add In Progress section
+    const inProgressTasks = tasks.filter(t => t.column === 'inprogress');
+    if (inProgressTasks.length > 0) {
+      newLines.push('## In Progress');
+      inProgressTasks.forEach(task => {
+        newLines.push(`- [ ] ${task.id}: ${task.text} (${task.phase})`);
+      });
+    }
+    
+    // Add Done section
+    const doneTasks = tasks.filter(t => t.column === 'done');
+    if (doneTasks.length > 0) {
+      newLines.push('## Done');
+      doneTasks.forEach(task => {
+        newLines.push(`- [x] ${task.id}: ${task.text} (${task.phase})`);
+      });
+    }
+    
+    // Keep existing footer sections
+    let inFooter = false;
+    for (const line of lines) {
+      if (line.startsWith('---')) {
+        newLines.push(line);
+        inFooter = true;
+      } else if (!inFooter) {
+        newLines.push(line);
+      }
+    }
+    
+    await writeFile(KANBAN_PATH, newLines.join('\n'), 'utf-8');
+  } catch (error) {
+    console.error('Error saving kanban.md:', error);
   }
 }
