@@ -113,11 +113,9 @@ const TICKER_DATA: Record<string, MCPTicker> = {
   'SOL/USDT': { symbol: 'SOL/USDT', price: 98.5, change24h: 4.3, volume24h: 3.2e8, timestamp: Date.now() }
 };
 
-// In-memory storage
-let orders: any[] = [
-  { id: '1', exchange: 'Binance', symbol: 'BTC/USDT', side: 'buy', amount: 0.5, price: 42000, status: 'filled', timestamp: Date.now() - 3600000 },
-  { id: '2', exchange: 'Binance', symbol: 'ETH/USDT', side: 'sell', amount: 5, price: 2500, status: 'filled', timestamp: Date.now() - 7200000 }
-];
+// NOTE: This endpoint simulates an MCP server.
+// It intentionally does NOT provide durable trade history persistence.
+// The UI treats localStorage as the source of truth for trades.
 
 let activeSubscriptions: string[] = [];
 let mcpConnected = true;
@@ -198,7 +196,7 @@ export async function GET(request: NextRequest) {
       }
       return NextResponse.json({ tickers: TICKER_DATA });
     } else if (action === 'orders') {
-      return NextResponse.json({ orders });
+      return NextResponse.json({ orders: [] });
     } else if (action === 'status') {
       return NextResponse.json({
         connected: mcpConnected,
@@ -322,7 +320,6 @@ export async function POST(request: NextRequest) {
         status: 'filled',
         timestamp: Date.now()
       };
-      orders = [newOrder, ...orders];
 
       // Update ticker data with new price
       if (TICKER_DATA[symbol]) {
@@ -333,9 +330,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ order: newOrder, success: true });
     } else if (action === 'cancel_order') {
       const { orderId } = params;
-      orders = orders.map((o: any) =>
-        o.id === orderId ? { ...o, status: 'cancelled' } : o
-      );
+      // No persistent order store in this simulated API.
       return NextResponse.json({ success: true, orderId });
     } else if (action === 'subscribe_ticker') {
       const { symbols } = params;

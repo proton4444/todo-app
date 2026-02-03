@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ArrowUpRight,
   ArrowDownLeft,
@@ -25,6 +25,8 @@ import {
 import type { MCPStatus, OrderForm } from '@/lib/trading/types';
 import { TradingProvider, useTradingStore } from '@/lib/trading/store';
 import { normalizeTrades } from '@/lib/trading/normalize';
+import { formatDateTime, formatNumber, formatPercent, formatUsd } from '@/lib/trading/format';
+import { saveTradingState, type TradingPersistedStateV1 } from '@/lib/trading/storage';
 
 function toCsv(rows: string[][]) {
   const escape = (val: string) => {
@@ -74,6 +76,7 @@ function TradingDashboardInner() {
   });
 
   const eventSourceRef = useRef<EventSource | null>(null);
+  const importFileRef = useRef<HTMLInputElement | null>(null);
 
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message, visible: true });
@@ -84,7 +87,8 @@ function TradingDashboardInner() {
   useEffect(() => {
     loadMCPStatus();
     loadExchanges();
-    loadTrades();
+    // Trade history source of truth is local persisted store.
+    // (MCP "orders" endpoint is intentionally not treated as reliable persistence.)
 
     return () => {
       if (eventSourceRef.current) {
@@ -173,18 +177,7 @@ function TradingDashboardInner() {
     }
   };
 
-  const loadTrades = async () => {
-    try {
-      const response = await fetch('/api/mcp?action=orders');
-      const data = await response.json();
-      if (data.orders) {
-        const normalized = normalizeTrades(data.orders, { limit: 200 });
-        actions.setTrades(normalized.trades);
-      }
-    } catch (error) {
-      console.error('Failed to load trades:', error);
-    }
-  };
+  // Trades load from local persisted store (see TradingProvider).
 
   const handleQuickOrder = async (symbol: string, side: 'buy' | 'sell') => {
     if (!mcpConnected) {
@@ -369,6 +362,62 @@ function TradingDashboardInner() {
     showNotification('success', `Exported ${trades.length} trades to CSV`);
   };
 
+  const exportBackupJson = () => {
+    const payload: TradingPersistedStateV1 = {
+      version: 1,
+      savedAt: Date.now(),
+      orderForm,
+      positions,
+      trades,
+      marketData,
+      marketDataSavedAt: Date.now(),
+    };
+
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    downloadTextFile(`trading-backup-${stamp}.json`, JSON.stringify(payload, null, 2), 'application/json');
+    showNotification('success', 'Backup exported');
+  };
+
+  const triggerImportBackup = () => {
+    importFileRef.current?.click();
+  };
+
+  const importBackupFromFile = async (file: File) => {
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text) as Partial<TradingPersistedStateV1>;
+
+      if (parsed.version !== 1) {
+        showNotification('error', 'Unsupported backup format');
+        return;
+      }
+
+      actions.setOrderForm(parsed.orderForm ?? ({} as OrderForm));
+      actions.setPositions(Array.isArray(parsed.positions) ? parsed.positions : []);
+      actions.setTrades(Array.isArray(parsed.trades) ? parsed.trades : []);
+
+      if (Array.isArray(parsed.marketData)) {
+        actions.setMarketData(parsed.marketData);
+      }
+
+      // Persist immediately as the new source of truth
+      saveTradingState({
+        version: 1,
+        savedAt: Date.now(),
+        orderForm: (parsed.orderForm as any) ?? orderForm,
+        positions: Array.isArray(parsed.positions) ? (parsed.positions as any) : [],
+        trades: Array.isArray(parsed.trades) ? (parsed.trades as any) : [],
+        marketData: Array.isArray(parsed.marketData) ? (parsed.marketData as any) : undefined,
+        marketDataSavedAt: Array.isArray(parsed.marketData) ? Date.now() : undefined,
+      });
+
+      showNotification('success', 'Backup imported');
+    } catch (e) {
+      console.error('Import failed:', e);
+      showNotification('error', 'Failed to import backup');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       <div className="max-w-7xl mx-auto px-6 py-8">
@@ -417,6 +466,32 @@ function TradingDashboardInner() {
               )}
 
               <button
+                className="bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-all"
+                onClick={exportBackupJson}
+              >
+                Backup
+              </button>
+              <button
+                className="bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-lg transition-all"
+                onClick={triggerImportBackup}
+              >
+                Restore
+              </button>
+
+              <input
+                ref={importFileRef}
+                type="file"
+                accept="application/json"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void importBackupFromFile(file);
+                  // allow re-importing same file
+                  e.target.value = '';
+                }}
+              />
+
+              <button
                 className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all"
                 onClick={loadMCPStatus}
               >
@@ -436,9 +511,9 @@ function TradingDashboardInner() {
                 <span className="text-gray-400">Total Equity</span>
               </div>
             </div>
-            <div className="text-3xl font-bold text-white mb-2">${totalEquity.toLocaleString()}</div>
+            <div className="text-3xl font-bold text-white mb-2">{formatUsd(totalEquity, { maxFractionDigits: 0 })}</div>
             <div className={`text-sm ${totalPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {totalPnl >= 0 ? '+' : ''}{totalPnl.toFixed(2)} PnL
+              {formatUsd(totalPnl)} PnL
             </div>
           </div>
 
@@ -497,13 +572,13 @@ function TradingDashboardInner() {
                       </div>
                       <div>
                         <div className="text-white font-semibold">{market.symbol}</div>
-                        <div className="text-sm text-gray-400">Vol: ${(market.volume24h / 1e6).toFixed(2)}M</div>
+                        <div className="text-sm text-gray-400">Vol: {formatNumber(market.volume24h / 1e6, { maxFractionDigits: 2 })}M</div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-white font-bold">${market.price.toLocaleString()}</div>
+                      <div className="text-white font-bold">{formatUsd(market.price, { maxFractionDigits: 2 })}</div>
                       <div className={`text-sm ${market.change24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {market.change24h >= 0 ? '+' : ''}{market.change24h.toFixed(2)}%
+                        {formatPercent(market.change24h, { maxFractionDigits: 2, sign: true })}
                       </div>
                     </div>
                   </div>
@@ -670,16 +745,17 @@ function TradingDashboardInner() {
                         </div>
                         <div>
                           <div className="text-gray-400">Entry</div>
-                          <div className="text-white">${position.entryPrice.toLocaleString()}</div>
+                          <div className="text-white">{formatUsd(position.entryPrice, { maxFractionDigits: 2 })}</div>
                         </div>
                         <div>
                           <div className="text-gray-400">Current</div>
-                          <div className="text-white">${position.currentPrice.toLocaleString()}</div>
+                          <div className="text-white">{formatUsd(position.currentPrice, { maxFractionDigits: 2 })}</div>
                         </div>
                         <div>
                           <div className="text-gray-400">PnL</div>
                           <div className={`font-semibold ${position.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            {position.pnl >= 0 ? '+' : ''}{position.pnl.toFixed(2)}
+                            {formatUsd(position.pnl)}
+                            <span className="ml-2 text-xs text-gray-400">({formatPercent(position.pnlPercent, { maxFractionDigits: 2, sign: true })})</span>
                           </div>
                         </div>
                       </div>
@@ -737,10 +813,10 @@ function TradingDashboardInner() {
                       </div>
                       <div>
                         <div className="text-gray-400">Amount</div>
-                        <div className="text-white">{trade.amount}</div>
+                        <div className="text-white">{formatNumber(trade.amount, { maxFractionDigits: 8 })}</div>
                       </div>
                     </div>
-                    <div className="text-xs text-gray-400 mt-2">{new Date(trade.timestamp).toLocaleString()}</div>
+                    <div className="text-xs text-gray-400 mt-2">{formatDateTime(trade.timestamp)}</div>
                   </div>
                 ))}
               </div>
